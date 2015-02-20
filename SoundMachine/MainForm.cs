@@ -1,12 +1,10 @@
 using System;
-using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
 using System.Drawing;
 using System.Text;
 using System.Windows.Forms;
 using System.IO;
-using System.Linq;
 using System.Runtime.InteropServices;    // for PInvoke
 using System.Media;
 
@@ -30,9 +28,13 @@ namespace SoundMachine
             this.WindowState = FormWindowState.Minimized;
             Ap = new DApp();
             UpdateTitle();
-            Ap.ReadFolder(System.IO.Path.Combine(
+            var soundsFolder = System.IO.Path.Combine(
                 System.IO.Path.GetDirectoryName(Application.ExecutablePath),
-                "Sounds"));
+                "Sounds");
+            if (!Directory.Exists(soundsFolder))
+                soundsFolder = "Sounds";
+
+            Ap.ReadFolder(soundsFolder);
             UpdateMainList();
 
             Random = new Random();
@@ -79,7 +81,7 @@ namespace SoundMachine
             windows7KeepAliveTimer.Enabled = false;
             Sound sound = (Sound)lvMain.Items[index].Tag;
             sound.Play();
-            windows7KeepAliveTimer.Enabled = true;
+            //windows7KeepAliveTimer.Enabled = true;
         }
 
         private void ScrollListTo(int itemno)
@@ -124,7 +126,7 @@ namespace SoundMachine
                     break;
                 case Keys.Escape:
                     if (String.IsNullOrEmpty(tbFilter.Text))
-                        Sound.Mute();
+                        SoundPlaying.MuteAll();
                     else
                         tbFilter.Text = "";
                     break;
@@ -290,7 +292,7 @@ namespace SoundMachine
                 windows7KeepAliveTimer.Interval = 30000;
                 this.Visible = false;
             }
-            Sound.Mute();
+            SoundPlaying.MuteAll();
         }
 
         private void taskBarIcon_MouseDoubleClick(object sender, MouseEventArgs e)
@@ -337,273 +339,6 @@ namespace SoundMachine
         {
             if (e.Button == MouseButtons.Right)
                 Close();
-        }
-    }
-
-    public class Pair
-    {
-        public Pair(string fn, string n)
-        {
-            filename = fn;
-            name = n;
-        }
-
-        string filename;
-        string name;
-
-        override public string ToString()
-        {
-            return name;
-        }
-    }
-
-    public class Sound : IComparable<Sound>
-    {
-        public string Path;
-
-        public override string ToString()
-        {
-            var fn = System.IO.Path.GetFileNameWithoutExtension(Path);
-            var fns = fn.Split('[');
-            return fns[0].TrimEnd();
-        }
-
-        static public void Mute()
-        {
-            SoundPlayer[] amps;
-            lock (m_ActiveMediaPlayers)
-            {
-                amps = m_ActiveMediaPlayers.ToArray();
-                m_ActiveMediaPlayers.Clear();
-            }
-
-            foreach (var mediaPlayer in amps)
-            {
-                mediaPlayer.Stop();
-            }
-        }
-
-        static private List<SoundPlayer> m_ActiveMediaPlayers = new List<SoundPlayer>();
-
-        public void Play()
-        {
-            try
-            {
-                var mediaPlayer = new SoundPlayer(Path);
-                mediaPlayer.Play();
-                lock (m_ActiveMediaPlayers)
-                    m_ActiveMediaPlayers.Add(mediaPlayer);
-            }
-            catch (Exception e)
-            {
-                MessageBox.Show(e.ToString(), e.Message);
-            }
-        }
-
-        #region IComparable<Sound> Members
-
-        public int CompareTo(Sound other)
-        {
-            return this.ToString().CompareTo(other.ToString());
-        }
-
-        #endregion
-    }
-
-    public class DApp
-    {
-        public bool useAnd = true, wholeWord = false;
-
-        public bool WholeWord
-        {
-            get { return wholeWord; }
-            set
-            {
-                wholeWord = value;
-                // If the test gets WEAKER then invalidate the cached list
-                if (!wholeWord)
-                    InvalidateFilterCache();
-            }
-        }
-
-        public bool UseAnd
-        {
-            get { return useAnd; }
-            set
-            {
-                useAnd = value;
-                // If the test gets WEAKER then invalidate the cached list
-                if (!useAnd)
-                    InvalidateFilterCache();
-            }
-        }
-        private string[] filterWords;
-
-        public void InvalidateFileCache()
-        {
-            cachedWavs = null;
-            cachedFilteredWavs = null;
-        }
-
-        public void InvalidateFilterCache()
-        {
-            cachedFilteredWavs = null;
-        }
-
-        public IEnumerable<Sound> CachedFilteredWavs
-        {
-            get
-            {
-                if (cachedFilteredWavs == null)
-                    return Wavs;
-                return cachedFilteredWavs;
-            }
-        }
-
-        public IEnumerable<Sound> FilteredWavs
-        {
-            get
-            {
-                // Always cache the result
-                cachedFilteredWavs = new List<Sound>(CalcFilteredWavs);
-                return cachedFilteredWavs;
-            }
-        }
-
-        public IEnumerable<Sound> CalcFilteredWavs
-        {
-            get
-            {
-                foreach (Sound sound in CachedFilteredWavs)
-                {
-                    if (filterWords == null || filterWords.Length == 0)
-                    {
-                        yield return sound;
-                        continue;
-                    }
-                    string fn = Path.GetFileNameWithoutExtension(sound.Path).ToLower();
-                    if (useAnd)
-                    {
-                        bool ok = true;
-                        foreach (string w in filterWords)
-                        {
-                            if (wholeWord)
-                            {
-                                string[] fnw = fn.Split(haakjes);
-                                bool found = false;
-                                foreach (string x in fnw)
-                                {
-                                    if (!x.Equals(w))
-                                        continue;
-                                    found = true;
-                                    break;
-                                }
-                                if (found)
-                                    continue;
-                                ok = false;
-                                break;
-                            }
-                            else
-                            {
-                                if (fn.Contains(w))
-                                    continue;
-                                ok = false;
-                                break;
-                            }
-                        }
-                        if (!ok)
-                            continue;
-                    }
-                    else //or
-                    {
-                        bool ok = false;
-                        foreach (string w in filterWords)
-                        {
-                            if (wholeWord)
-                            {
-                                string[] fnw = fn.Split(haakjes);
-                                bool found = false;
-                                foreach (string x in fnw)
-                                {
-                                    if (!x.Equals(w))
-                                        continue;
-                                    found = true;
-                                    break;
-                                }
-                                if (!found)
-                                    continue;
-                                ok = true;
-                                break;
-                            }
-                            else
-                            {
-                                if (!fn.Contains(w))
-                                    continue;
-                                ok = true;
-                                break;
-                            }
-                        }
-                        if (!ok)
-                            continue;
-                    }
-                    yield return sound;
-                }
-            }
-        }
-
-        private char[] haakjes = { ' ', '[', ']', '(', ')' };
-
-        public DApp()
-        {
-        }
-
-
-        string lastFilter = "";
-
-        public void SetFilter(string filterstring)
-        {
-            string f = filterstring.Trim().ToLower();
-
-            // If the new filter does not contain the last one
-            //  OR we look for entire words only
-            //  then we cannot use the last filter to filter again
-            if (wholeWord || !f.Contains(lastFilter))
-                InvalidateFilterCache();
-
-            lastFilter = f;
-
-            filterWords = f.Split(' ');
-        }
-
-        string SoundFolder;
-        public void ReadFolder(string folder)
-        {
-            SoundFolder = System.IO.Path.IsPathRooted(folder) ? folder : System.IO.Path.Combine(System.IO.Directory.GetCurrentDirectory(), folder);
-        }
-
-        List<Sound> cachedWavs;
-        List<Sound> cachedFilteredWavs;
-
-        public IEnumerable<Sound> Wavs
-        {
-            get
-            {
-                if (cachedWavs == null)
-                {
-                    cachedWavs = new List<Sound>(DiskWavs);
-                    cachedWavs.Sort();
-                }
-
-                return cachedWavs;
-            }
-        }
-
-        public IEnumerable<Sound> DiskWavs
-        {
-            get
-            {
-                return Directory.GetFiles(SoundFolder, "*.wav", SearchOption.AllDirectories).Select(path => new Sound { Path = path });
-            }
         }
     }
 }

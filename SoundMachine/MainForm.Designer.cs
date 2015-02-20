@@ -74,7 +74,7 @@ namespace SoundMachine
             // 
             // windows7KeepAliveTimer
             // 
-            this.windows7KeepAliveTimer.Enabled = true;
+            this.windows7KeepAliveTimer.Enabled = false;
             this.windows7KeepAliveTimer.Interval = 10;
             this.windows7KeepAliveTimer.Tick += new System.EventHandler(this.windows7KeepAliveTimer_Tick);
             // 
