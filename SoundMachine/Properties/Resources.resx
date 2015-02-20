@@ -114,4 +114,13 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
+  <data name="MainForm_UpdateTitle_SoundMachine" xml:space="preserve">
+    <value>SoundMachine</value>
+  </data>
+  <data name="MainForm_MainForm_Could_not_register_hotkey" xml:space="preserve">
+    <value>Could not register hotkey</value>
+  </data>
+  <data name="MainForm_MainForm_FormClosed_Could_not_unregister_hotkey" xml:space="preserve">
+    <value>Could not unregister hotkey</value>
+  </data>
 </root>

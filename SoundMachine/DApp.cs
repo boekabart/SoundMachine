@@ -1,56 +1,58 @@
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Runtime.Serialization;
 
 namespace SoundMachine
 {
     public class DApp
     {
-        public bool useAnd = true, wholeWord = false;
+        private bool _useAnd = true;
+        private bool _wholeWord;
 
         public bool WholeWord
         {
-            get { return wholeWord; }
+            get { return _wholeWord; }
             set
             {
-                wholeWord = value;
+                _wholeWord = value;
                 // If the test gets WEAKER then invalidate the cached list
-                if (!wholeWord)
+                if (!_wholeWord)
                     InvalidateFilterCache();
             }
         }
 
         public bool UseAnd
         {
-            get { return useAnd; }
+            get { return _useAnd; }
             set
             {
-                useAnd = value;
+                _useAnd = value;
                 // If the test gets WEAKER then invalidate the cached list
-                if (!useAnd)
+                if (!_useAnd)
                     InvalidateFilterCache();
             }
         }
-        private string[] filterWords;
+
+        private string[] _filterWords = new string[0];
 
         public void InvalidateFileCache()
         {
-            cachedWavs = null;
-            cachedFilteredWavs = null;
+            _cachedWavs = null;
+            _cachedFilteredWavs = null;
         }
 
         public void InvalidateFilterCache()
         {
-            cachedFilteredWavs = null;
+            _cachedFilteredWavs = null;
         }
 
         public IEnumerable<Sound> CachedFilteredWavs
         {
             get
             {
-                if (cachedFilteredWavs == null)
-                    return Wavs;
-                return cachedFilteredWavs;
+                return _cachedFilteredWavs ?? Wavs;
             }
         }
 
@@ -59,154 +61,66 @@ namespace SoundMachine
             get
             {
                 // Always cache the result
-                cachedFilteredWavs = new List<Sound>(CalcFilteredWavs);
-                return cachedFilteredWavs;
+                return _cachedFilteredWavs = CalcFilteredWavs().ToList();
             }
         }
 
-        public IEnumerable<Sound> CalcFilteredWavs
+        public IEnumerable<Sound> CalcFilteredWavs()
         {
-            get
+            if (!_filterWords.Any())
+                return CachedFilteredWavs;
+
+            if (WholeWord)
             {
-                /*
-                if (filterWords == null || filterWords.Length == 0)
-                    return CachedFilteredWavs;
-
-                if (useAnd)
-                    return CalcFilteredWavs_And;
-
-                return CalcFilteredWavs_Or;
-                */
-
-                foreach (Sound sound in CachedFilteredWavs)
-                {
-                    if (filterWords == null || filterWords.Length == 0)
-                    {
-                        yield return sound;
-                        continue;
-                    }
-                    string fn = Path.GetFileNameWithoutExtension(sound.Path).ToLower();
-                    if (useAnd)
-                    {
-                        bool ok = true;
-                        foreach (string w in filterWords)
-                        {
-                            if (wholeWord)
-                            {
-                                string[] fnw = fn.Split(haakjes);
-                                bool found = false;
-                                foreach (string x in fnw)
-                                {
-                                    if (!x.Equals(w))
-                                        continue;
-                                    found = true;
-                                    break;
-                                }
-                                if (found)
-                                    continue;
-                                ok = false;
-                                break;
-                            }
-                            else
-                            {
-                                if (fn.Contains(w))
-                                    continue;
-                                ok = false;
-                                break;
-                            }
-                        }
-                        if (!ok)
-                            continue;
-                    }
-                    else //or
-                    {
-                        bool ok = false;
-                        foreach (string w in filterWords)
-                        {
-                            if (wholeWord)
-                            {
-                                string[] fnw = fn.Split(haakjes);
-                                bool found = false;
-                                foreach (string x in fnw)
-                                {
-                                    if (!x.Equals(w))
-                                        continue;
-                                    found = true;
-                                    break;
-                                }
-                                if (!found)
-                                    continue;
-                                ok = true;
-                                break;
-                            }
-                            else
-                            {
-                                if (!fn.Contains(w))
-                                    continue;
-                                ok = true;
-                                break;
-                            }
-                        }
-                        if (!ok)
-                            continue;
-                    }
-                    yield return sound;
-                }
+                return _useAnd
+                    ? CachedFilteredWavs.Where(
+                        sound => _filterWords.Intersect(sound.FilterWords).Count() == _filterWords.Length)
+                    : CachedFilteredWavs.Where(sound => _filterWords.Intersect(sound.FilterWords).Any());
             }
+
+            return _useAnd
+                ? CachedFilteredWavs.Where(sound => _filterWords.All(sound.FilterString.Contains))
+                : CachedFilteredWavs.Where(sound => _filterWords.Any(sound.FilterString.Contains));
         }
 
-        private char[] haakjes = { ' ', '[', ']', '(', ')' };
-
-        public DApp()
-        {
-        }
-
-
-        string lastFilter = "";
+        private string _lastFilter = "";
 
         public void SetFilter(string filterstring)
         {
-            string f = filterstring.Trim().ToLower();
+            var f = filterstring.Trim().ToLower();
 
             // If the new filter does not contain the last one
             //  OR we look for entire words only
             //  then we cannot use the last filter to filter again
-            if (wholeWord || !f.Contains(lastFilter))
+            if (_wholeWord || !f.Contains(_lastFilter))
                 InvalidateFilterCache();
 
-            lastFilter = f;
+            _lastFilter = f;
 
-            filterWords = f.Split(' ');
+            _filterWords = f.Split(new[] {' '}, StringSplitOptions.RemoveEmptyEntries);
         }
 
-        string SoundFolder;
+        private string _soundFolder;
         public void ReadFolder(string folder)
         {
-            SoundFolder = System.IO.Path.IsPathRooted(folder) ? folder : System.IO.Path.Combine(System.IO.Directory.GetCurrentDirectory(), folder);
+            _soundFolder = Path.IsPathRooted(folder) ? folder : Path.Combine(Directory.GetCurrentDirectory(), folder);
         }
 
-        List<Sound> cachedWavs;
-        List<Sound> cachedFilteredWavs;
+        private List<Sound> _cachedWavs;
+        private List<Sound> _cachedFilteredWavs;
 
         public IEnumerable<Sound> Wavs
         {
-            get
-            {
-                if (cachedWavs == null)
-                {
-                    cachedWavs = new List<Sound>(DiskWavs);
-                    cachedWavs.Sort();
-                }
-
-                return cachedWavs;
-            }
+            get { return _cachedWavs ?? (_cachedWavs = DiskWavs.OrderBy(s => s.FilterString).ToList()); }
         }
 
         public IEnumerable<Sound> DiskWavs
         {
             get
             {
-                return Directory.GetFiles(SoundFolder, "*.wav", SearchOption.AllDirectories).Select(path => new Sound { Path = path });
+                return
+                    Directory.GetFiles(_soundFolder, "*.wav", SearchOption.AllDirectories)
+                        .Select(path => new Sound(path));
             }
         }
     }

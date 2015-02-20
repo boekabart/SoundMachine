@@ -59,5 +59,32 @@ namespace SoundMachine.Properties {
                 resourceCulture = value;
             }
         }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Could not register hotkey.
+        /// </summary>
+        internal static string MainForm_MainForm_Could_not_register_hotkey {
+            get {
+                return ResourceManager.GetString("MainForm_MainForm_Could_not_register_hotkey", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Could not unregister hotkey.
+        /// </summary>
+        internal static string MainForm_MainForm_FormClosed_Could_not_unregister_hotkey {
+            get {
+                return ResourceManager.GetString("MainForm_MainForm_FormClosed_Could_not_unregister_hotkey", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to SoundMachine.
+        /// </summary>
+        internal static string MainForm_UpdateTitle_SoundMachine {
+            get {
+                return ResourceManager.GetString("MainForm_UpdateTitle_SoundMachine", resourceCulture);
+            }
+        }
     }
 }

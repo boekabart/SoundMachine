@@ -74,7 +74,7 @@ namespace SoundMachine
             // 
             // windows7KeepAliveTimer
             // 
-            this.windows7KeepAliveTimer.Enabled = false;
+            this.windows7KeepAliveTimer.Enabled = true;
             this.windows7KeepAliveTimer.Interval = 10;
             this.windows7KeepAliveTimer.Tick += new System.EventHandler(this.windows7KeepAliveTimer_Tick);
             // 
@@ -88,7 +88,7 @@ namespace SoundMachine
             // MainForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
-            this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
+            this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Dpi;
             this.ClientSize = new System.Drawing.Size(674, 412);
             this.Controls.Add(this.lvMain);
             this.Controls.Add(this.tbFilter);

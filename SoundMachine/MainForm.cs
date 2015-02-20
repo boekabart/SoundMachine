@@ -1,12 +1,10 @@
 using System;
-using System.ComponentModel;
-using System.Data;
 using System.Drawing;
-using System.Text;
+using System.Linq;
 using System.Windows.Forms;
 using System.IO;
 using System.Runtime.InteropServices;    // for PInvoke
-using System.Media;
+using SoundMachine.Properties;
 
 namespace SoundMachine
 {
@@ -16,20 +14,24 @@ namespace SoundMachine
 
         private void UpdateTitle()
         {
-            Text = "SoundMachine - " + (Ap.UseAnd ? "All" : "Any") + (Ap.WholeWord ? " Word" : " String");
+            Text = string.Format("{0} - {1} {2}",
+                Resources.MainForm_UpdateTitle_SoundMachine,
+                (Ap.UseAnd ? "All" : "Any"),
+                (Ap.WholeWord ? "Word" : "String")
+                );
         }
 
-        System.Random Random;
+        readonly Random _random;
 
         public MainForm()
         {
             InitializeComponent();
             lvMain.Columns.Add("Name", -1);
-            this.WindowState = FormWindowState.Minimized;
+            WindowState = FormWindowState.Minimized;
             Ap = new DApp();
             UpdateTitle();
-            var soundsFolder = System.IO.Path.Combine(
-                System.IO.Path.GetDirectoryName(Application.ExecutablePath),
+            var soundsFolder = Path.Combine(
+                Path.GetDirectoryName(Application.ExecutablePath) ?? ".",
                 "Sounds");
             if (!Directory.Exists(soundsFolder))
                 soundsFolder = "Sounds";
@@ -37,17 +39,17 @@ namespace SoundMachine
             Ap.ReadFolder(soundsFolder);
             UpdateMainList();
 
-            Random = new Random();
+            _random = new Random();
 
             try
             {
                 // Alt = 1, Ctrl = 2, Shift = 4, Win = 8
-                RegisterHotKey(this.Handle,
-                    this.GetType().GetHashCode(), 3, (int)'S');
+                RegisterHotKey(Handle,
+                    GetType().GetHashCode(), 3, 'S');
             }
             catch (Exception ex)
             {
-                Console.WriteLine("Could not register hotkey: " + ex.Message);
+                Console.WriteLine(@"{0}: {1}", Resources.MainForm_MainForm_Could_not_register_hotkey, ex.Message);
             }
         }
 
@@ -61,32 +63,36 @@ namespace SoundMachine
         {
             lvMain.BeginUpdate();
             lvMain.Sorting = SortOrder.None;
-            lvMain.Items.Clear();
 
-            foreach (Sound sound in Ap.FilteredWavs)
-            {
-                ListViewItem lvi = new ListViewItem();
-                lvi.Text = sound.ToString();
-                lvi.Font = new System.Drawing.Font("Arial Unicode MS", 13F);
-                lvi.Tag = sound;
-                lvi.ToolTipText = sound.Path;
-                lvMain.Items.Add(lvi);
-            }
-            //			lvMain.ShowItemToolTips = true;
+            lvMain.Items.Clear();
+            var listViewItems = Ap.FilteredWavs.Select(ListViewItemForSound);
+            lvMain.Items.AddRange(listViewItems.ToArray());
             lvMain.EndUpdate();
+        }
+
+        private static ListViewItem ListViewItemForSound(Sound sound)
+        {
+            return new ListViewItem
+            {
+                Text = sound.ToString(),
+                Font = new Font("Arial Unicode MS", 13F),
+                Tag = sound,
+                ToolTipText = sound.Path
+            };
         }
 
         private void PlaySound(int index)
         {
             windows7KeepAliveTimer.Enabled = false;
-            Sound sound = (Sound)lvMain.Items[index].Tag;
-            sound.Play();
-            //windows7KeepAliveTimer.Enabled = true;
+            var sound = lvMain.Items[index].Tag as Sound;
+            if (sound != null)
+                sound.Play();
+            windows7KeepAliveTimer.Enabled = true;
         }
 
         private void ScrollListTo(int itemno)
         {
-            for (int poging = itemno; poging >= 0; poging--)
+            for (var poging = itemno; poging >= 0; poging--)
             {
                 try
                 {
@@ -109,7 +115,6 @@ namespace SoundMachine
                     e.Handled = true;
                     Ap.WholeWord = !Ap.WholeWord;
                     UpdateTitle();
-                    //Ap.SetFilter(tbFilter.Text);
                     UpdateMainList();
                     break;
                 case Keys.Subtract:
@@ -117,7 +122,6 @@ namespace SoundMachine
                     e.Handled = true;
                     Ap.UseAnd = !Ap.UseAnd;
                     UpdateTitle();
-                    //Ap.SetFilter(tbFilter.Text);
                     UpdateMainList();
                     break;
                 case Keys.F5:
@@ -143,7 +147,7 @@ namespace SoundMachine
                 case Keys.End:
                 case Keys.PageDown:
                     {
-                        int count = lvMain.Items.Count;
+                        var count = lvMain.Items.Count;
                         if (count > 0)
                         {
                             int last = count - 1;
@@ -159,7 +163,7 @@ namespace SoundMachine
                         }
                         if (lvMain.Items.Count > 1)
                         {
-                            int item = Random.Next(lvMain.Items.Count);
+                            int item = _random.Next(lvMain.Items.Count);
                             SelectItem(item);
                         }
                         break;
@@ -180,11 +184,11 @@ namespace SoundMachine
 
         private void lvMain_KeyDown(object sender, KeyEventArgs e)
         {
-            MouseDowned = false;
+            _mouseDowned = false;
             if (e.KeyCode >= Keys.A && e.KeyCode <= Keys.Z || e.KeyCode == Keys.Space)
             {
                 if (e.KeyCode == Keys.Space)
-                    tbFilter.Text += " ";
+                    tbFilter.Text += @" ";
                 else
                     tbFilter.Text += e.KeyData.ToString().Substring(0, 1);
 
@@ -224,19 +228,19 @@ namespace SoundMachine
             }
         }
 
-        private bool MouseDowned = false;
+        private bool _mouseDowned;
 
         private void lvMain_MouseDown(object sender, MouseEventArgs e)
         {
-            MouseDowned = true;
+            _mouseDowned = true;
         }
 
         private void lvMain_SelectedIndexChanged(object sender, EventArgs e)
         {
-            if (!MouseDowned)
+            if (!_mouseDowned)
                 return;
 
-            MouseDowned = false;
+            _mouseDowned = false;
 
             if (lvMain.SelectedIndices.Count > 0)
             {
@@ -255,9 +259,9 @@ namespace SoundMachine
         {
             if (m.Msg == 0x0312)
             {
-                if (!this.Visible || WindowState == FormWindowState.Minimized)
+                if (!Visible || WindowState == FormWindowState.Minimized)
                 {
-                    this.Visible = true;
+                    Visible = true;
                     WindowState = FormWindowState.Maximized;
                     Activate();
                 }
@@ -277,11 +281,10 @@ namespace SoundMachine
 
         private void Form1_FormClosing(object sender, FormClosingEventArgs e)
         {
-            if (this.Visible)
+            if (Visible)
             {
                 e.Cancel = true;
-                this.WindowState = FormWindowState.Minimized;
-                return;
+                WindowState = FormWindowState.Minimized;
             }
         }
 
@@ -290,34 +293,34 @@ namespace SoundMachine
             if (windows7KeepAliveTimer.Interval < 1000)
             {
                 windows7KeepAliveTimer.Interval = 30000;
-                this.Visible = false;
+                Visible = false;
             }
             SoundPlaying.MuteAll();
         }
 
         private void taskBarIcon_MouseDoubleClick(object sender, MouseEventArgs e)
         {
-            if (this.Visible)
+            if (Visible)
             {
-                this.WindowState = FormWindowState.Minimized;
+                WindowState = FormWindowState.Minimized;
                 return;
             }
 
-            this.Visible = true;
-            this.WindowState = FormWindowState.Maximized;
-            this.Activate();
+            Visible = true;
+            WindowState = FormWindowState.Maximized;
+            Activate();
         }
 
         private void MainForm_Resize(object sender, EventArgs e)
         {
-            if (this.WindowState == FormWindowState.Minimized)
+            if (WindowState == FormWindowState.Minimized)
             {
-                this.Visible = false;
+                Visible = false;
                 taskBarIcon.Visible = true;
             }
             else
             {
-                this.Visible = true;
+                Visible = true;
                 taskBarIcon.Visible = true;
             }
         }
@@ -326,12 +329,12 @@ namespace SoundMachine
         {
             try
             {
-                UnregisterHotKey(this.Handle,
-                    this.GetType().GetHashCode());
+                UnregisterHotKey(Handle,
+                    GetType().GetHashCode());
             }
             catch (Exception ex)
             {
-                Console.WriteLine("Could not unregister hotkey: " + ex.Message);
+                Console.WriteLine(@"{0}: {1}", Resources.MainForm_MainForm_FormClosed_Could_not_unregister_hotkey, ex.Message);
             }
         }
 
