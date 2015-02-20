@@ -117,7 +117,7 @@ namespace SoundMachine
             {
                 return
                     new DirectoryInfo(_soundFolder)
-                        .EnumerateFiles("*.*")
+                        .EnumerateFiles("*.*", SearchOption.AllDirectories)
                         .Where(SoundPlaying.IsSupported)
                         .Select(fi => new Sound(fi.FullName));
             }
