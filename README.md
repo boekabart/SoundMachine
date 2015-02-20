@@ -16,6 +16,7 @@ My Well Known Sound Board. Targets .NET 4.5.1+
 * ESC will clear the search field, hitting ESC on a clear field stops all sounds.
 * Numpad + and - will change the search behavior: All or Any, Full ords or Partial Words. The mode is displayed in the title bar.
 * Right-clicking the tray icon will close SoundMachine.
+* F5 refreshes the file list from disk (normally cached in memory)
 
 ## Details
 SoundMachine prefers a sound device that has 'Speakers' in the name (and is active).
