@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Runtime.Serialization;
 
 namespace SoundMachine
 {
@@ -50,10 +49,7 @@ namespace SoundMachine
 
         public IEnumerable<Sound> CachedFilteredWavs
         {
-            get
-            {
-                return _cachedFilteredWavs ?? Wavs;
-            }
+            get { return _cachedFilteredWavs ?? Wavs; }
         }
 
         public IEnumerable<Sound> FilteredWavs
@@ -101,6 +97,7 @@ namespace SoundMachine
         }
 
         private string _soundFolder;
+
         public void ReadFolder(string folder)
         {
             _soundFolder = Path.IsPathRooted(folder) ? folder : Path.Combine(Directory.GetCurrentDirectory(), folder);
@@ -119,8 +116,10 @@ namespace SoundMachine
             get
             {
                 return
-                    Directory.GetFiles(_soundFolder, "*.wav", SearchOption.AllDirectories)
-                        .Select(path => new Sound(path));
+                    new DirectoryInfo(_soundFolder)
+                        .EnumerateFiles("*.*")
+                        .Where(SoundPlaying.IsSupported)
+                        .Select(fi => new Sound(fi.FullName));
             }
         }
     }

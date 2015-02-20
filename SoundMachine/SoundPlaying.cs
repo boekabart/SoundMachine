@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Windows.Forms;
 using CSCore.Codecs;
@@ -19,6 +20,18 @@ namespace SoundMachine
             var players = ActiveMediaPlayers.Keys.ToArray();
             foreach (var pl in players)
                 pl.Dispose();
+        }
+
+        public static readonly string[] SupportedExtensions = CodecFactory.Instance.GetSupportedFileExtensions().Select(ext => "."+ext.ToLowerInvariant()).ToArray();
+
+        public static bool IsSupportedExtension(string extensionWithDot)
+        {
+            return SupportedExtensions.Contains(extensionWithDot.ToLowerInvariant());
+        }
+
+        public static bool IsSupported(FileInfo fi)
+        {
+            return SupportedExtensions.Contains(fi.Extension.ToLowerInvariant());
         }
 
         public static void MuteAll()
